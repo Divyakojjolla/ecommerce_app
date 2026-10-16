@@ -1,0 +1,185 @@
+from flask import Flask, render_template, request, redirect, session, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+
+app.config['SECRET_KEY'] = 'ecommerce123'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ecommerce.db'
+
+db = SQLAlchemy(app)
+
+# -------------------
+# DATABASE TABLES
+# -------------------
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100))
+    password = db.Column(db.String(100))
+    role = db.Column(db.String(20))
+
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    price = db.Column(db.Float)
+    description = db.Column(db.String(200))
+
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_name = db.Column(db.String(100))
+    quantity = db.Column(db.Integer)
+    total_price = db.Column(db.Float)
+
+# -------------------
+# HOME PAGE
+# -------------------
+
+@app.route('/')
+def home():
+    products = Product.query.all()
+    return render_template('index.html', products=products)
+
+# -------------------
+# LOGIN
+# -------------------
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+
+    if request.method == 'POST':
+
+        username = request.form['username']
+        password = request.form['password']
+
+        user = User.query.filter_by(
+            username=username,
+            password=password
+        ).first()
+
+        if user:
+            session['user'] = username
+            session['role'] = user.role
+            return redirect('/')
+
+    return render_template('login.html')
+
+# -------------------
+# ADD TO CART
+# -------------------
+
+cart = []
+
+@app.route('/add_to_cart/<int:id>')
+def add_to_cart(id):
+
+    product = Product.query.get(id)
+
+    cart.append({
+        'name': product.name,
+        'price': product.price
+    })
+
+    return redirect('/cart')
+
+@app.route('/cart')
+def view_cart():
+
+    total = sum(item['price'] for item in cart)
+
+    return render_template(
+        'cart.html',
+        cart=cart,
+        total=total
+    )
+
+# -------------------
+# CHECKOUT
+# -------------------
+
+@app.route('/checkout')
+def checkout():
+
+    total = sum(item['price'] for item in cart)
+
+    for item in cart:
+        order = Order(
+            product_name=item['name'],
+            quantity=1,
+            total_price=item['price']
+        )
+        db.session.add(order)
+
+    db.session.commit()
+
+    cart.clear()
+
+    return f"Order placed successfully. Total = ₹{total}"
+
+# -------------------
+# PRODUCT API
+# -------------------
+
+@app.route('/api/products')
+def get_products():
+
+    products = Product.query.all()
+
+    data = []
+
+    for p in products:
+        data.append({
+            "id": p.id,
+            "name": p.name,
+            "price": p.price
+        })
+
+    return jsonify(data)
+
+# -------------------
+# ORDER API
+# -------------------
+
+@app.route('/api/orders')
+def get_orders():
+
+    orders = Order.query.all()
+
+    data = []
+
+    for o in orders:
+        data.append({
+            "product": o.product_name,
+            "quantity": o.quantity,
+            "amount": o.total_price
+        })
+
+    return jsonify(data)
+
+if __name__ == '__main__':
+
+    with app.app_context():
+        db.create_all()
+
+        if Product.query.count() == 0:
+
+            db.session.add(Product(
+                name="Laptop",
+                price=55000,
+                description="HP Laptop"
+            ))
+
+            db.session.add(Product(
+                name="Mobile",
+                price=15000,
+                description="Samsung Mobile"
+            ))
+            db.session.add(Product(
+                name="Headphones",
+                price=2000,
+                description="Wireless Headphones"
+            ))  
+            
+            db.session.commit()
+
+    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
