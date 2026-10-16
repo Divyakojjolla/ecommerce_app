@@ -1,31 +1,6 @@
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - E-Commerce Store</title>
-</head>
-<body>
-    <h1>Welcome to E-Commerce Store</h1>
+<form method="POST">
     <h2>Login</h2>
-
-    {% if error %}
-        <p style="color:red;">{{ error }}</p>
-    {% endif %}
-
-    <form method="POST" action="/login">
-        <label>Username:</label>
-        <input type="text" name="username" required>
-        <br><br>
-
-        <label>Password:</label>
-        <input type="password" name="password" required>
-        <br><br>
-
-        <button type="submit">Login</button>
-    </form>
-
-    <p>Don't have an account? <a href="/register">Create an account</a></p>
-</body>
-</html>
+    <input name="username"><br><br>
+    <input name="password"><br><br>
+    <button>Login</button>
+</form>
